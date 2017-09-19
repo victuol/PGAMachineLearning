@@ -1,0 +1,101 @@
+---
+title: "Final Peer Graded Assesment - Machine Learning. SCP Data Science at JHU"
+author: "Victor"
+date: "19 de septiembre de 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+In the "Weight Lifting Exercise Dataset", participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions:
+
+- exactly according to the specification (Class A), 
+- throwing the elbows to the front (Class B), 
+- lifting the dumbbell only halfway (Class C), 
+- lowering the dumbbell only halfway (Class D)
+- throwing the hips to the front (Class E). 
+
+**Class A corresponds to the specified execution of the exercise**, while the other 4 classes correspond to common mistakes.
+
+Based on the Dataset, the goal of this study is to predict the manner in which the individuals did the exercise.
+
+###Exploratory Data Analysis
+
+We obtain the data from the source:
+
+```{r , echo=TRUE,cache=TRUE}
+UrlTrain <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+UrlTest <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training <- read.csv(url(UrlTrain), na.strings=c("NA","#DIV/0!",""))
+testing <- read.csv(url(UrlTest), na.strings=c("NA","#DIV/0!",""))
+dim(training)
+dim(testing)
+head(training)
+```
+
+
+##Cleaning of Data
+There are variables having a lot of missing fields To obtain a consistent analysis, the variables containing NA values must be removed. Additionally, the following variables are not direcly related to the target variable classe and must be removed from the analysis. These are:
+- x 
+- user_name 
+- raw_timestamp_part_1 
+- raw_timestamp_part_2 
+- cvtd_timestamp
+- new_window
+- num_window 
+
+The following code will clean the **training** data frame:
+
+```{r , echo=TRUE,cache=TRUE}
+NA_Count = sapply(1:dim(training)[2],function(x)sum(is.na(training[,x])))
+NA_list = which(NA_Count>0)
+colnames(training[,c(1:7)])
+
+training = training[,-NA_list]
+training = training[,-c(1:7)]
+training$classe = factor(training$classe)
+str(training)
+```
+
+For the testing set we do a similar procedure:
+```{r , echo=TRUE,cache=TRUE}
+str(testing)
+colnames(testing)
+testing = testing[,-NA_list]
+testing = testing[,-c(1:7)]
+str(testing)
+#testing$classe = factor(testing$classe)
+```
+
+We found our main variable of interest **"classe"** in the last column of the given Data Frame. This will be our prediction variable.
+
+```{r , echo=TRUE,cache=TRUE}
+summary(training$classe)
+```
+
+###Model Building
+The problem at hand is consistent with a classification problem. For simplicity, we will use the **Random Forest algorithm** as a straightforward method for easy interpretation and the nonlinear characteristics of the data that is being analyzed.
+
+```{r , echo=TRUE,cache=TRUE}
+set.seed(1234)
+cv3 = trainControl(method="cv",number=3,allowParallel=TRUE,verboseIter=TRUE)
+modrf = train(classe~., data=training, method="rf",trControl=cv3)
+```
+
+Now we must check the performance of the training model within the testing dataset:
+
+```{r , echo=TRUE,cache=TRUE}
+modrf$finalModel
+prf=predict(modrf,testing)
+```
+
+
+```{r , echo=TRUE,cache=TRUE}
+prf
+str(prf)
+length(prf)
+```
